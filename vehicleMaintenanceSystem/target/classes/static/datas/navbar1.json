@@ -1,0 +1,53 @@
+[{
+    "id": "1",
+    "title": "单位模块",
+    "icon": "fa-cubes",
+    "spread": true,
+    "children": [{
+        "id": "7",
+        "title": "单位",
+        "icon": "&#xe6c6;",
+        "url": "test.html"
+    }, {
+        "id": "8",
+        "title": "车辆",
+        "icon": "&#xe63c;",
+        "url": "form.html"
+    }, {
+        "id": "9",
+        "title": "导航栏",
+        "icon": "&#xe628;",
+        "url": "nav.html"
+    }, {
+        "id": "10",
+        "title": "列表四",
+        "icon": "&#xe614;",
+        "url": "list4.html"
+    }, {
+        "id": "11",
+        "title": "百度一下",
+        "icon": "&#xe658;",
+        "url": "https://www.baidu.com"
+    }]
+}, {
+    "id": "2",
+    "title": "组件",
+    "icon": "fa-cogs",
+    "spread": false,
+    "children": [{
+        "id": "12",
+        "title": "Navbar",
+        "icon": "fa-table",
+        "url": "navbar.html"
+    }, {
+        "id": "13",
+        "title": "Tab",
+        "icon": "&#xe658;",
+        "url": "tab.html"
+    }, {
+        "id": "14",
+        "title": "app.js主入口",
+        "icon": "&#xe658;",
+        "url": "app.html"
+    }]
+}]

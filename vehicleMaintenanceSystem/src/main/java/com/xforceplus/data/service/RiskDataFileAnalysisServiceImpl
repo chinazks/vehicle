@@ -1,0 +1,372 @@
+package com.eigpay.riskcenter.core.service.chief.riskdatafileanalysis.impl;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PushbackInputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.POIXMLDocument;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.eigpay.common.error.exception.ValidateException;
+import com.eigpay.common.lang.DateUtil;
+import com.eigpay.common.lang.ReflectUtil;
+import com.eigpay.riskcenter.core.model.chief.fileanalysis.FileAnalysisCommonCO;
+import com.eigpay.riskcenter.core.model.chief.fileanalysis.FileValidateErrorCO;
+import com.eigpay.riskcenter.core.service.chief.riskdatafileanalysis.RiskDataFileAnalysisService;
+import com.eigpay.riskcenter.core.service.constant.FileAnalysisConstants;
+import com.eigpay.riskcenter.core.service.enums.CommonResultCode;
+import com.eigpay.riskcenter.core.service.enums.fileupload.BlacklistBINDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.BlacklistCardDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.BlacklistDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.FileTypeEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.FraudInfoDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.HighRiskBINDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.HighRiskMerchantDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.RiskFileDataBaseEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.TerminalATMDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.TerminalPOSDataEnum;
+import com.eigpay.riskcenter.core.service.enums.fileupload.WhitelistCardDataEnum;
+
+/**
+ * 
+ * 
+ * @author E072061
+ * @version $Id: AbstractRiskDataFileAnalysisService.java, v 0.1 Jan 29, 2018 5:42:18 PM E072061 Exp $
+ */
+@Service("riskDataFileAnalysisService")
+public class RiskDataFileAnalysisServiceImpl implements RiskDataFileAnalysisService {
+
+    private static final Logger LOGGER       = LoggerFactory
+                                                 .getLogger(RiskDataFileAnalysisServiceImpl.class);
+
+    private static final String COL_LIST_KEY = "COL_LIST_KEY";
+    private static final String DATA_MAP_KEY = "DATA_MAP_KEY";
+
+    @Override
+    public Map<String, Object> analysis(InputStream is, String dataType) {
+        
+        Map<String, Object> analysisResult = new HashMap<String, Object>();
+        XSSFWorkbook wb = null;
+        try {
+            //validate file input stream
+            if (!is.markSupported()) {
+                is = new PushbackInputStream(is, 8);
+            }
+            if (!valiateFileInputStream(is, FileTypeEnum.XLSX)) {
+                throw new ValidateException(CommonResultCode.FILE_BATCH_UPLOAD_FILE_TYPE_ERROR,
+                    CommonResultCode.FILE_BATCH_UPLOAD_FILE_TYPE_ERROR.getDesc());
+            }
+            wb = new XSSFWorkbook(is);
+            XSSFSheet sheet = wb.getSheetAt(0);
+            Map<String, Object> colListAndMaps = getColListAndMaps(dataType);
+            List<String> colList = (List<String>) colListAndMaps.get(COL_LIST_KEY);
+            Map<String, Map<String, Object>> maps = (Map<String, Map<String, Object>>) colListAndMaps
+                .get(DATA_MAP_KEY);
+            //validate the first line
+            Map<Integer, String> colAndLineNumMap = validateSheetFirstLine(sheet, colList);
+            int maxColNum = sheet.getRow(0).getLastCellNum();
+            int maxRowNum = sheet.getLastRowNum();
+            List<FileValidateErrorCO> errors = new ArrayList<FileValidateErrorCO>();
+            List<FileAnalysisCommonCO> covertedCOs = new ArrayList<FileAnalysisCommonCO>();
+            for (int i = 1; i <= maxRowNum; i++) {
+                XSSFRow row = sheet.getRow(i);
+                Map<String, Object> validateResult = validateOneRow(row, i, maxColNum,
+                    colAndLineNumMap, maps);
+                List<FileValidateErrorCO> rowErrors = (List<FileValidateErrorCO>) validateResult
+                    .get(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_ERROR_LIST_KEY);
+                FileAnalysisCommonCO commonCO = (FileAnalysisCommonCO) validateResult
+                    .get(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_CO_KEY);
+                if (rowErrors != null && rowErrors.size() > 0) {
+                    errors.addAll(rowErrors);
+                } else {
+                    covertedCOs.add(commonCO);
+                }
+            }
+            analysisResult.put(
+                FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_ERROR_LIST_KEY,
+                errors);
+            analysisResult.put(
+                FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_CO_KEY, covertedCOs);
+            return analysisResult;
+        } catch (ValidateException e) {
+            throw e;
+        } catch (IOException e) {
+            LOGGER.error("-----file batch upload failed: failed to get file input stream-----", e);
+            throw new ValidateException(CommonResultCode.FILE_BATCH_UPLOAD_FILE_IO_ERROR,
+                CommonResultCode.FILE_BATCH_UPLOAD_FILE_IO_ERROR.getDesc());
+        } catch (Exception e) {
+            LOGGER.error("-----file batch upload failed: failed to get file input stream-----", e);
+            throw new ValidateException(CommonResultCode.FILE_BATCH_UPLOAD_FILE_IO_ERROR,
+                CommonResultCode.FILE_BATCH_UPLOAD_FILE_IO_ERROR.getDesc());
+        }  finally {
+            if (is != null) {
+                try {
+                    is.close();
+                    is = null;
+                } catch (IOException e) {
+                    LOGGER.error(
+                        "-------File Upload Process Failed: Failed to Close Input Stream-----", e);
+                }
+            }
+            try {
+                if (wb != null) {
+                    wb.close();
+                }
+            } catch (IOException e) {
+                LOGGER.error("", e);
+            }
+        }
+
+    }
+
+    /**
+     * validate whether the input stream is legal
+     * 
+     * @param is
+     * @param fileType
+     * @return
+     * @throws IOException
+     */
+    private boolean valiateFileInputStream(InputStream is, FileTypeEnum fileType)
+                                                                                 throws IOException {
+        if (FileTypeEnum.XLSX.getCode().equals(fileType.getCode())) {
+            return POIXMLDocument.hasOOXMLHeader(is);
+        }
+        if (FileTypeEnum.XLS.getCode().equals(fileType.getCode())) {
+            return POIFSFileSystem.hasPOIFSHeader(is);
+        }
+        return false;
+    }
+
+    /**
+     * first line validate process<br>
+     * if the column list size is not equals to the sheet's first line's columns' size, validate failed<br>
+     * for each column name in the configured list, if the column name is not contained in the sheet's first line, validate failed<br>
+     * 
+     * 
+     * @param sheet
+     * @return
+     */
+    private Map<Integer, String> validateSheetFirstLine(XSSFSheet sheet, List<String> columnList) {
+        Map<Integer, String> colNameAndLineNumMap = new HashMap<Integer, String>();
+        if (sheet == null || columnList == null) {
+            throw new ValidateException(
+                CommonResultCode.FILE_BATCH_UPLOAD_FILE_SHEET_FIRST_LINE_ERROR_NODATA,
+                CommonResultCode.FILE_BATCH_UPLOAD_FILE_SHEET_FIRST_LINE_ERROR_NODATA.getDesc());
+        }
+        XSSFRow firstRow = sheet.getRow(0);
+        for (int i = 0; i < firstRow.getLastCellNum(); i++) {
+            XSSFCell cell = firstRow.getCell(i);
+            if (cell == null || StringUtils.isEmpty(cell.getStringCellValue())) {
+                throw new ValidateException(
+                    CommonResultCode.FILE_BATCH_UPLOAD_FILE_SHEET_FIRST_LINE_ERROR_DATA_ISEPMTY,
+                    CommonResultCode.FILE_BATCH_UPLOAD_FILE_SHEET_FIRST_LINE_ERROR_DATA_ISEPMTY
+                        .getDesc());
+            }
+            if (!columnList.contains(cell.getStringCellValue())) {
+                throw new ValidateException(
+                    CommonResultCode.FILE_BATCH_UPLOAD_COLUMN_FIELD_NOMATCH,
+                    CommonResultCode.FILE_BATCH_UPLOAD_COLUMN_FIELD_NOMATCH.getDesc());
+            }
+            colNameAndLineNumMap.put(i, cell.getStringCellValue());
+        }
+        return colNameAndLineNumMap;
+    }
+
+    private Map<String, Object> validateOneRow(XSSFRow row, int rowNum, int maxColNum,
+                                               Map<Integer, String> colAndNumMap,
+                                               Map<String, Map<String, Object>> maps) {
+        Map<String, Object> oneRowValidateResult = new HashMap<String, Object>();
+        Map<String, Object> colAndFieldMap = maps.get(RiskFileDataBaseEnum.COL_FIELD_MAP);
+        Map<String, Object> colAndFormatMap = maps.get(RiskFileDataBaseEnum.COL_FORMAT_MAP);
+        Map<String, Object> colAndFieldTypeMap = maps.get(RiskFileDataBaseEnum.COL_FIELD_TYPE_MAP);
+        Map<String, Object> colNullAbleMap = maps.get(RiskFileDataBaseEnum.COL_NULLBLE_MAP);
+        Map<String, Object> colAndScopeMap = maps.get(RiskFileDataBaseEnum.COL_DATASCOPE_MAP);
+        Map<String, Object> colAndLengthConfigMap = maps
+            .get(RiskFileDataBaseEnum.COL_LENGTH_CONFIG_MAP);
+        List<FileValidateErrorCO> errors = new ArrayList<FileValidateErrorCO>();
+        FileAnalysisCommonCO commonCO = null;
+        for (int i = 0; i < maxColNum; i++) {
+            String colTitle = colAndNumMap.get(i);
+            XSSFCell cell = row.getCell(i);
+            FileValidateErrorCO error = null;
+            //null value validate
+            if ((cell == null || StringUtils.isEmpty(cell.getStringCellValue()))
+                && !((Boolean) colNullAbleMap.get(colTitle))) {
+                error = new FileValidateErrorCO();
+                error.setErrorColCode(colTitle);
+                //excel's row and column number start from 0, so need to +1
+                error.setErrorRowNum(rowNum + 1);
+                error.setErrorColNum(i + 1);
+                error
+                    .setErrorReason(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_ERROR_REASON_NOTNULL);
+                errors.add(error);
+                continue;
+            }
+            //format validate
+            String cellValue = cell.getStringCellValue();
+            String fieldType = (String) colAndFieldTypeMap.get(colTitle);
+            String fieldFormat = (String) colAndFormatMap.get(colTitle);
+            String dataScope = (String) colAndScopeMap.get(colTitle);
+            int lenCon = (int) colAndLengthConfigMap.get(colTitle);
+            if (RiskFileDataBaseEnum.DATATYPE_NUM.equals(fieldType) && !isDigit(cellValue)) {
+                error = new FileValidateErrorCO();
+                error.setErrorColCode(colTitle);
+                error.setErrorRowNum(rowNum + 1);
+                error.setErrorColNum(i + 1);
+                error
+                    .setErrorReason(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_ERROR_REASON_SHOULD_BE_NUMBER);
+                errors.add(error);
+                continue;
+            }
+            if (RiskFileDataBaseEnum.DATATYPE_DATE.equals(fieldType)) {
+                try {
+                    DateUtil.parseDate(cellValue, fieldFormat);
+                } catch (Exception e) {
+                    error = new FileValidateErrorCO();
+                    error.setErrorColCode(colTitle);
+                    error.setErrorRowNum(rowNum + 1);
+                    error.setErrorColNum(i + 1);
+                    error
+                        .setErrorReason(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_ERROR_REASON_WRONG_DATE_FORMAT);
+                    errors.add(error);
+                    continue;
+                }
+            }
+            //data length validate
+            if (lenCon != 0 && cellValue.length() > lenCon) {
+                error = new FileValidateErrorCO();
+                error.setErrorColCode(colTitle);
+                error.setErrorRowNum(rowNum + 1);
+                error.setErrorColNum(i + 1);
+                error
+                    .setErrorReason(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_ERROR_DATA_OVER_LENGTH);
+                errors.add(error);
+                continue;
+            }
+
+            //data scope validate
+            boolean isInScope = false;
+            if (!RiskFileDataBaseEnum.DATASCOPE_NOSCOPE.equals(dataScope)) {
+                String[] scopes = dataScope.split(RiskFileDataBaseEnum.DATASCOPE_SPERATOR);
+                for (String sc : scopes) {
+                    if (sc.equals(cellValue)) {
+                        isInScope = true;
+                    }
+                }
+            }else{
+                isInScope=true;
+            }
+            if (!isInScope) {
+                error = new FileValidateErrorCO();
+                error.setErrorColCode(colTitle);
+                error.setErrorRowNum(rowNum + 1);
+                error.setErrorColNum(i + 1);
+                error
+                    .setErrorReason(FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_ERROR_DATA_NOT_IN_THE_SCOPE);
+                errors.add(error);
+                continue;
+            }
+
+            if (errors.size() == 0) {
+                //validate pass
+                commonCO = setValue(commonCO, (String) colAndFieldMap.get(colTitle), cellValue);
+                commonCO.setRowNum(rowNum);
+            }
+        }
+        oneRowValidateResult.put(
+            FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_ERROR_LIST_KEY, errors);
+        oneRowValidateResult.put(
+            FileAnalysisConstants.FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_CO_KEY, commonCO);
+        return oneRowValidateResult;
+    }
+
+    private Map<String, Object> getColListAndMaps(String dataType) {
+        Map<String, Object> result = new HashMap<String, Object>();
+        List<String> colList = null;
+        Map<String, Map<String, Object>> maps = null;
+        switch (dataType) {
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_BLACKLIST_BIN:
+                colList = BlacklistBINDataEnum.getColList();
+                maps = BlacklistBINDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_BLACKLIST_CARD:
+                colList = BlacklistCardDataEnum.getColList();
+                maps = BlacklistCardDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_BLACKLIST:
+                colList = BlacklistDataEnum.getColList();
+                maps = BlacklistDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_FRAUD_INFO:
+                colList = FraudInfoDataEnum.getColList();
+                maps = FraudInfoDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_HIGH_RISK_BIN:
+                colList = HighRiskBINDataEnum.getColList();
+                maps = HighRiskBINDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_HIGH_RISK_MERCHANT:
+                colList = HighRiskMerchantDataEnum.getColList();
+                maps = HighRiskMerchantDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_TERMINAL_ATM:
+                colList = TerminalATMDataEnum.getColList();
+                maps = TerminalATMDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_TERMINAL_POS:
+                colList = TerminalPOSDataEnum.getColList();
+                maps = TerminalPOSDataEnum.getMaps();
+                break;
+            case FileAnalysisConstants.FILE_ANALYSIS_FILE_TYPE_WHITELIST:
+                colList = WhitelistCardDataEnum.getColList();
+                maps = WhitelistCardDataEnum.getMaps();
+                break;
+
+            default:
+                break;
+        }
+        result.put(COL_LIST_KEY, colList);
+        result.put(DATA_MAP_KEY, maps);
+        return result;
+    }
+
+    private FileAnalysisCommonCO setValue(FileAnalysisCommonCO obj, String fieldName, String value) {
+        try {
+            if (obj == null) {
+                obj = new FileAnalysisCommonCO();
+            }
+            ReflectUtil.setFieldValue(obj, fieldName, value);
+        } catch (SecurityException | IllegalArgumentException e) {
+            LOGGER.error("", e);
+        }
+        return obj;
+    }
+
+    private boolean isDigit(String s) {
+        if (s == null || StringUtils.isEmpty(s)) {
+            return false;
+        } else {
+            char[] sc = s.toCharArray();
+            for (int i = 0; i < sc.length; i++) {
+                if (sc[i] != '.' && !Character.isDigit(sc[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+}

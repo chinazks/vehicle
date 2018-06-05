@@ -1,0 +1,39 @@
+package com.eigpay.riskcenter.core.service.chief.riskdatafileanalysis;
+
+import java.io.InputStream;
+import java.util.Map;
+
+/**
+ * 
+ * 
+ * @author E072061
+ * @version $Id: RiskDataFileAnalysisService.java, v 0.1 Jan 29, 2018 4:33:33 PM E072061 Exp $
+ */
+public interface RiskDataFileAnalysisService {
+    
+    public Map<String, Object> analysis(InputStream is,String dataType);
+    //public static final String FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_ERROR_LIST_KEY          = "ERROR_LIST";
+    //public static final String FILE_ANALYSIS_SHEET_ROW_VALIDATE_RESULT_CO_KEY                  = "CONVERTED_CO";
+    //File Upload Start
+    /** file batch upload failed: failed to get file input stream */
+    //FILE_BATCH_UPLOAD_FILE_IO_ERROR("301", "file batch upload failed: failed to get file input stream", "file batch upload failed: failed to get file input stream", ErrorLevels.WARN, ErrorTypes.BIZ),
+    /** file batch upload failed: input stream format error */
+    //FILE_BATCH_UPLOAD_FILE_FORMAT_ERROR("302", "file batch upload failed: input stream format error", "file batch upload failed: input stream format error", ErrorLevels.WARN, ErrorTypes.BIZ),
+    /** file batch upload failed: error file type */
+    //FILE_BATCH_UPLOAD_FILE_TYPE_ERROR("303", "file batch upload failed: error file type", "file batch upload failed: error file type", ErrorLevels.WARN, ErrorTypes.BIZ),
+    /** file batch upload failed: sheet file line error no data*/
+    //FILE_BATCH_UPLOAD_FILE_SHEET_FIRST_LINE_ERROR_NODATA("304", "file batch upload failed: sheet file line error no data", "file batch upload failed: sheet file line error no data",
+                                                         ErrorLevels.WARN, ErrorTypes.BIZ),
+    /** file batch upload failed: sheet file line error data is null */
+    //FILE_BATCH_UPLOAD_FILE_SHEET_FIRST_LINE_ERROR_DATA_ISEPMTY("305", "file batch upload failed: sheet file line error data is null", "file batch upload failed: sheet file line error data is null",
+                                                               ErrorLevels.WARN, ErrorTypes.BIZ),
+    /**file batch upload failed: column list does not match the field list */
+    //FILE_BATCH_UPLOAD_COLUMN_FIELD_NOMATCH("306", "file batch upload failed: column list does not match the field list", "file batch upload failed: sheet file line error", ErrorLevels.WARN,
+                                           ErrorTypes.BIZ),
+
+    //File Upload end
+   /* <dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+		</dependency>*/
+}

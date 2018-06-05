@@ -1,0 +1,18 @@
+spring:
+#######################
+###  oracle
+#######################
+    datasource:
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://106.15.194.116:3306/manage
+        username: root
+        password: 123
+    resources:
+        static-locations: classpath:/static/
+    jpa:
+        hibernate:
+          ddl-auto: update
+        show-sql: true
+size: 3
+server:
+    port: 9095

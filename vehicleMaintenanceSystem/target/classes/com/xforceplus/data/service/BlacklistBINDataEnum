@@ -1,0 +1,263 @@
+package com.eigpay.riskcenter.core.service.enums.fileupload;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 
+ * 
+ * @author E072061
+ * @version $Id: BlacklistBINDataEnum.java, v 0.1 Feb 2, 2018 3:25:01 PM E072061 Exp $
+ */
+public enum BlacklistBINDataEnum implements RiskFileDataBaseEnum {
+    /**ISSUING_ICA*/
+    ISSUING_ICA("发卡行","Issuing ICA", "col18", DATATYPE_STRING, DATAFORMAT_COMMON, true, DATASCOPE_NOSCOPE, 6),
+    /**ACCOUNT_RANGE_FROM*/
+    ACCOUNT_RANGE_FROM("BIN开始","Account Range From", "col19", DATATYPE_STRING, DATAFORMAT_COMMON, true, DATASCOPE_NOSCOPE, 11),
+    /**ACCOUNT_RANGE_TO*/
+    ACCOUNT_RANGE_TO("Bin结束","Account Range To", "col20", DATATYPE_STRING, DATAFORMAT_COMMON, true, DATASCOPE_NOSCOPE, 11),
+
+    ;
+    private String                                  colName;
+    private String                                  colCode;
+    private String                                  fieldCode;
+    private String                                  fieldType;
+    private String                                  fieldFormat;
+    private boolean                                 nullAble;
+    private String                                  dataScope;
+    private int                                     lenCon;
+
+    private static List<String>                     colList               = null;
+    private static Map<String, Object>              colAndFieldMap        = null;
+    private static Map<String, Object>              colAndFormatMap       = null;
+    private static Map<String, Object>              colAndFieldTypeMap    = null;
+    private static Map<String, Object>              colNullAbleMap        = null;
+    private static Map<String, Object>              colAndScopeMap        = null;
+    private static Map<String, Object>              colAndLengthConfigMap = null;
+
+    private static Map<String, Map<String, Object>> maps                  = null;
+
+    public static BlacklistBINDataEnum getEnumByColCode(String colCode) {
+        for (BlacklistBINDataEnum result : values()) {
+            if (result.getColCode().equals(colCode)) {
+                return (result);
+            }
+        }
+        return (null);
+    }
+
+    public static List<String> getColList() {
+        if (colList == null) {
+            colList = new ArrayList<String>();
+            for (BlacklistBINDataEnum e : values()) {
+                colList.add(e.getColCode());
+            }
+        }
+        return colList;
+    }
+
+    public static Map<String, Map<String, Object>> getMaps() {
+        if (maps != null) {
+            return maps;
+        } else {
+            Map<String, Map<String, Object>> maps = new HashMap<String, Map<String, Object>>();
+            if (colAndFieldMap == null) {
+                colAndFieldMap = new HashMap<String, Object>();
+                for (BlacklistBINDataEnum e : values()) {
+                    colAndFieldMap.put(e.getColCode(), e.getFieldCode());
+                }
+            }
+            maps.put(COL_FIELD_MAP, colAndFieldMap);
+
+            if (colAndFormatMap == null) {
+                colAndFormatMap = new HashMap<String, Object>();
+                for (BlacklistBINDataEnum e : values()) {
+                    colAndFormatMap.put(e.getColCode(), e.getFieldFormat());
+                }
+            }
+            maps.put(COL_FORMAT_MAP, colAndFormatMap);
+
+            if (colAndFieldTypeMap == null) {
+                colAndFieldTypeMap = new HashMap<String, Object>();
+                for (BlacklistBINDataEnum e : values()) {
+                    colAndFieldTypeMap.put(e.getColCode(), e.getFieldType());
+                }
+            }
+            maps.put(COL_FIELD_TYPE_MAP, colAndFieldTypeMap);
+
+            if (colNullAbleMap == null) {
+                colNullAbleMap = new HashMap<String, Object>();
+                for (BlacklistBINDataEnum e : values()) {
+                    colNullAbleMap.put(e.getColCode(), e.getNullAble());
+                }
+            }
+            maps.put(COL_NULLBLE_MAP, colNullAbleMap);
+
+            if (colAndScopeMap == null) {
+                colAndScopeMap = new HashMap<String, Object>();
+                for (BlacklistBINDataEnum e : values()) {
+                    colAndScopeMap.put(e.getColCode(), e.getDataScope());
+                }
+            }
+            maps.put(COL_DATASCOPE_MAP, colAndScopeMap);
+
+            if (colAndLengthConfigMap == null) {
+                colAndLengthConfigMap = new HashMap<String, Object>();
+                for (BlacklistBINDataEnum e : values()) {
+                    colAndLengthConfigMap.put(e.getColCode(), e.getLenCon());
+                }
+            }
+            maps.put(COL_LENGTH_CONFIG_MAP, colAndLengthConfigMap);
+
+            return maps;
+        }
+    }
+
+    private BlacklistBINDataEnum(String colName,String colCode, String fieldCode, String fieldType, String fieldFormat, boolean nullAble, String dataScope, int lenCon) {
+        this.colName=colName;
+        this.colCode = colCode;
+        this.fieldCode = fieldCode;
+        this.fieldType = fieldType;
+        this.fieldFormat = fieldFormat;
+        this.nullAble = nullAble;
+        this.dataScope = dataScope;
+        this.lenCon = lenCon;
+    }
+
+    public String getColName() {
+        return colName;
+    }
+
+    public void setColName(String colName) {
+        this.colName = colName;
+    }
+
+    /**
+     * Setter method for property <tt>colCode</tt>.
+     * 
+     * @param colCode value to be assigned to property colCode
+     */
+    public void setColCode(String colCode) {
+        this.colCode = colCode;
+    }
+
+    /**
+     * Setter method for property <tt>fieldCode</tt>.
+     * 
+     * @param fieldCode value to be assigned to property fieldCode
+     */
+    public void setFieldCode(String fieldCode) {
+        this.fieldCode = fieldCode;
+    }
+
+    /**
+     * Setter method for property <tt>fieldType</tt>.
+     * 
+     * @param fieldType value to be assigned to property fieldType
+     */
+    public void setFieldType(String fieldType) {
+        this.fieldType = fieldType;
+    }
+
+    /**
+     * Setter method for property <tt>fieldFormat</tt>.
+     * 
+     * @param fieldFormat value to be assigned to property fieldFormat
+     */
+    public void setFieldFormat(String fieldFormat) {
+        this.fieldFormat = fieldFormat;
+    }
+
+    /**
+     * Getter method for property <tt>colCode</tt>.
+     * 
+     * @return property value of colCode
+     */
+    public String getColCode() {
+        return colCode;
+    }
+
+    /**
+     * Getter method for property <tt>fieldCode</tt>.
+     * 
+     * @return property value of fieldCode
+     */
+    public String getFieldCode() {
+        return fieldCode;
+    }
+
+    /**
+     * Getter method for property <tt>fieldType</tt>.
+     * 
+     * @return property value of fieldType
+     */
+    public String getFieldType() {
+        return fieldType;
+    }
+
+    /**
+     * Getter method for property <tt>fieldFormat</tt>.
+     * 
+     * @return property value of fieldFormat
+     */
+    public String getFieldFormat() {
+        return fieldFormat;
+    }
+
+    /**
+     * Setter method for property <tt>nullAble</tt>.
+     * 
+     * @param nullAble value to be assigned to property nullAble
+     */
+    public void setNullAble(boolean nullAble) {
+        this.nullAble = nullAble;
+    }
+
+    public boolean getNullAble() {
+        return nullAble;
+    }
+
+    /**
+     * Getter method for property <tt>dataScope</tt>.
+     * 
+     * @return property value of dataScope
+     */
+    public String getDataScope() {
+        return dataScope;
+    }
+
+    /**
+     * Setter method for property <tt>dataScope</tt>.
+     * 
+     * @param dataScope value to be assigned to property dataScope
+     */
+    public void setDataScope(String dataScope) {
+        this.dataScope = dataScope;
+    }
+
+    /**
+     * Getter method for property <tt>lenCon</tt>.
+     * 
+     * @return property value of lenCon
+     */
+    public int getLenCon() {
+        return lenCon;
+    }
+
+    /**
+     * Setter method for property <tt>lenCon</tt>.
+     * 
+     * @param lenCon value to be assigned to property lenCon
+     */
+    public void setLenCon(int lenCon) {
+        this.lenCon = lenCon;
+    }
+
+    @Override
+    public int getLenType() {
+        return 0;
+    }
+    
+}
